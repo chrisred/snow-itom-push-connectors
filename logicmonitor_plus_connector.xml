@@ -1,0 +1,277 @@
+<?xml version="1.0" encoding="UTF-8"?><unload unload_date="2024-02-11 23:33:00">
+<sys_remote_update_set action="INSERT_OR_UPDATE">
+<application display_value="Event Management Connectors">ac4c9c57dbb1d090561b186c1396191a</application>
+<application_name>Event Management Connectors</application_name>
+<application_scope>sn_em_connector</application_scope>
+<application_version>2.7.0</application_version>
+<collisions/>
+<commit_date/>
+<deleted/>
+<description/>
+<inserted/>
+<name>LogicMonitor Plus Push Connector</name>
+<origin_sys_id/>
+<parent display_value=""/>
+<release_date/>
+<remote_base_update_set display_value=""/>
+<remote_parent_id/>
+<remote_sys_id>08166ba12f9c02104cc5dc1a2799b609</remote_sys_id>
+<state>loaded</state>
+<summary/>
+<sys_class_name>sys_remote_update_set</sys_class_name>
+<sys_created_by>admin</sys_created_by>
+<sys_created_on>2024-02-11 23:32:59</sys_created_on>
+<sys_id>ee292f652f9c02104cc5dc1a2799b654</sys_id>
+<sys_mod_count>0</sys_mod_count>
+<sys_updated_by>admin</sys_updated_by>
+<sys_updated_on>2024-02-11 23:32:59</sys_updated_on>
+<update_set display_value=""/>
+<update_source display_value=""/>
+<updated/>
+</sys_remote_update_set>
+<sys_update_xml action="INSERT_OR_UPDATE">
+<action>INSERT_OR_UPDATE</action>
+<application display_value="Event Management Connectors">ac4c9c57dbb1d090561b186c1396191a</application>
+<category>customer</category>
+<comments/>
+<name>sn_em_connector_listener_95a386ed2f9002104cc5dc1a2799b6e3</name>
+<payload>&lt;?xml version="1.0" encoding="UTF-8"?&gt;&lt;record_update table="sn_em_connector_listener"&gt;&lt;sn_em_connector_listener action="INSERT_OR_UPDATE"&gt;&lt;active&gt;true&lt;/active&gt;&lt;description&gt;Handles all alert types including Website alerts.&amp;#13;
+&amp;#13;
+To avoid issues with parsing certain time zones the "GMT (No daylight saving)" zone should be set under "Account Information" in LogicMonitor (see script comments).&amp;#13;
+&amp;#13;
+Create a "Custom HTTP Delivery" integration in LogicMonitor and use the JSON payload below:&amp;#13;
+&amp;#13;
+{&amp;#13;
+    "host": "##HOST##",&amp;#13;
+    "hostname": "##HOSTNAME##",&amp;#13;
+    "website": "##WEBSITE##",&amp;#13;
+    "agentid": "##AGENTID##",&amp;#13;
+    "internalid": "##INTERNALID##",&amp;#13;
+    "alertid" : "##ALERTID##",&amp;#13;
+    "alerttype": "##ALERTTYPE##",&amp;#13;
+    "alertstatus": "##ALERTSTATUS##",&amp;#13;
+    "level": "##LEVEL##",&amp;#13;
+    "datasource": "##DATASOURCE##",&amp;#13;
+    "dsname": "##DSNAME##",&amp;#13;
+    "instance": "##INSTANCE##",&amp;#13;
+    "datapoint": "##DATAPOINT##",&amp;#13;
+    "value": "##VALUE##",&amp;#13;
+    "date" : "##DATE##",&amp;#13;
+    "start": "##START##",&amp;#13;
+    "duration": "##DURATION##",&amp;#13;
+    "end": "##END##",&amp;#13;
+    "threshold": "##THRESHOLD##",&amp;#13;
+    "message" : "##MESSAGE##",&amp;#13;
+    "hostgroup": "##HOSTGROUP##",&amp;#13;
+    "wineventid": "##EVENTCODE##",&amp;#13;
+    "webcheckurl": "##URL##"&amp;#13;
+}&lt;/description&gt;&lt;event_source_label&gt;LogicMonitorPlus&lt;/event_source_label&gt;&lt;header_name&gt;user-agent&lt;/header_name&gt;&lt;header_value&gt;lmp&lt;/header_value&gt;&lt;mid_server_script_include/&gt;&lt;name&gt;LogicMonitor Plus&lt;/name&gt;&lt;order&gt;100&lt;/order&gt;&lt;script&gt;&lt;![CDATA[(function process(/*RESTAPIRequest*/ request, body){
+    //gs.debug('[MPC] Query String: {0} Headers: {1}', request.queryString, JSON.stringify(request.headers));
+    //gs.debug('[MPC] Body: {0}', body);
+
+    try
+    {
+        var requestBody = JSON.parse(body);
+        if (isEmpty(requestBody))
+        {
+            status = 400;
+            return 'No events found in the request body.';
+        }
+
+        var eventRecord = new GlideRecord('em_event');
+        eventRecord.initialize();
+
+        var eventClass = request.queryParams.event_class;
+        eventRecord.source = source_label;
+        eventRecord.event_class = (eventClass === undefined) ? source_label : eventClass.toString();
+
+        var resource = (requestBody.website) ? requestBody.website : requestBody.datasource;
+        var moduleName = (requestBody.dsname) ? requestBody.dsname : resource;
+        var webcheckHost = parseWebcheckUrl(requestBody.webcheckurl);
+
+        eventRecord.node = (webcheckHost) ? webcheckHost : requestBody.host;
+        eventRecord.resource = resource;
+        eventRecord.metric_name = (requestBody.datapoint) ? moduleName+'-'+requestBody.datapoint : '';
+        eventRecord.type = requestBody.alerttype;
+        eventRecord.message_key = requestBody.alertid;
+        var severity = requestBody.level;
+        var alertStatus = requestBody.alertstatus;
+
+        switch (severity)
+        {
+            case 'critical':
+                eventRecord.severity = '1';
+                break;
+            case 'error':
+                eventRecord.severity = '2';
+                break;
+            case 'warn':
+                eventRecord.severity = '3';
+                break;
+            default:
+                eventRecord.severity = '3';
+        }
+
+        if (alertStatus == 'clear')
+        {
+            eventRecord.resolution_state = 'Closing';
+            eventRecord.severity = '0';
+        }
+        
+        if (alertStatus == 'ack')
+        {
+            // set acknowledged alerts to severity 5, "OK"
+            eventRecord.severity = '5';
+        }
+
+        eventRecord.description = requestBody.message;
+        var eventTimeStamp;
+        var dateString;
+        var eventDate;
+
+        if (requestBody.date)
+        {
+            // use the "date" property if it is populated
+            dateString = parseEventDate(requestBody.date);
+
+            // use Date rather than Date.parse(), parse has some odd behaviour with strings including a time zone offset
+            eventDate = new Date(dateString);
+            eventTimeStamp = eventDate.getTime();
+        }
+        else if (requestBody.end)
+        {
+            // check for "end" if there is no date
+            dateString = parseEventDate(requestBody.end);
+            eventDate = new Date(dateString);
+            eventTimeStamp = eventDate.getTime();
+        }
+        else
+        {
+            // Use "start + duration" if date and end are not populated (e.g. for website alerts), this is only
+            // accurate to 1 minute.
+            var startString = parseEventDate(requestBody.start);
+            var eventStart = new Date(startString);
+            var eventDuration = getEventDuration(requestBody.duration);
+            eventTimeStamp = eventStart.getTime() + eventDuration;
+        }
+
+        if (!isNaN(eventTimeStamp))
+        {
+            var glideEventDate = new GlideDateTime();
+            glideEventDate.setNumericValue(eventTimeStamp);
+            eventRecord.time_of_event = glideEventDate;
+        }
+        else
+        {
+            throw new Error('Error parsing event date or duration, this could be due to an abbreviated time zone like BST or an unexpected format.');
+        }
+
+        var additionalInfo = requestBody;
+
+        // populate additional_info field with request params
+        var endpointParamsUtil = new EndpointParamsUtil();
+        endpointParamsUtil.updateAdditionalInfoWithEndpointParams(request.queryParams, additionalInfo);
+
+        // populate additional_info field with connector_tags
+        if (typeof connector_tags !== undefined &amp;&amp; connector_tags)
+        {
+            var pushConnectorInstanceUtils = new PushConnectorInstanceUtils();
+            pushConnectorInstanceUtils.updateAdditionalInfoWithConnectorTags(additionalInfo, connector_tags);
+        }
+
+        // populate custom domain info
+		new sn_em_connector.PushConnectorUtil().populateDomain(sys_id, request, requestBody, eventRecord);
+
+        eventRecord.additional_info = JSON.stringify(additionalInfo);
+
+        var responseBody = {};
+        responseBody.eventSysIds = [];
+        responseBody.eventSysIds.push(eventRecord.insert());
+        response.setBody(responseBody);
+
+        return 'success';
+    }
+    catch (err)
+    {
+        gs.error(err.message);
+        status = 500;
+        return err.message;
+    }
+})(request, body);
+
+function isEmpty(obj)
+{
+    for (var prop in obj)
+    {
+        if (Object.prototype.hasOwnProperty.call(obj, prop))
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+function parseEventDate(dateString)
+{
+    // LogicMonitor uses an abbreviated time zone for date strings, and strangely doesn't provide a UTC/GMT token
+    // that can be used in the event payload. This means that an ambiguous zone like BST will fail to parse, the
+    // UTC or GMT zone should be set at the LogicMonitor account level to ensure the date string can be parsed.
+    var match = dateString.match(/^(\d{4}-\d\d-\d\d)\s(.*)/);
+
+    if (match)
+    {
+        // replace 1970-01-01 to 1970/01/01 and return full time stamp string
+        return match[1].replaceAll('-', '/') + ' ' + match[2];
+    }
+    else
+    {
+        return '';
+    }
+}
+
+function getEventDuration(durationString)
+{
+    // get duration in milliseconds
+    var match = durationString.match(/^(\d+)h (\d+)m/);
+
+    if (match)
+    {
+        var minutes = (parseInt(match[1]) * 60) + parseInt(match[2]);
+        return minutes * 60 * 1000;
+    }
+    else
+    {
+        return NaN;
+    }
+}
+
+function parseWebcheckUrl(urlString)
+{
+    // Match the domain, port, path and params from the URL, doesn't cover every valid URI but should include any that
+    // are used in a WebCheck monitor. If ES6+ script mode is enabled the "URL API" could be used instead.
+    var match = urlString.match(/^(?:\w+\:\/\/)?([^\/?#:]+):?([^\/?#:]*)([^\?]*)\??(.*)$/);
+
+    // return the domain section of the URI
+    return (match) ? match[1] : '';
+}
+]]&gt;&lt;/script&gt;&lt;source&gt;lmp&lt;/source&gt;&lt;sys_class_name&gt;sn_em_connector_listener&lt;/sys_class_name&gt;&lt;sys_created_by&gt;admin&lt;/sys_created_by&gt;&lt;sys_created_on&gt;2024-02-11 16:16:59&lt;/sys_created_on&gt;&lt;sys_id&gt;95a386ed2f9002104cc5dc1a2799b6e3&lt;/sys_id&gt;&lt;sys_mod_count&gt;1&lt;/sys_mod_count&gt;&lt;sys_name&gt;LogicMonitor Plus&lt;/sys_name&gt;&lt;sys_package display_value="Event Management Connectors" source="sn_em_connector"&gt;ac4c9c57dbb1d090561b186c1396191a&lt;/sys_package&gt;&lt;sys_policy/&gt;&lt;sys_scope display_value="Event Management Connectors"&gt;ac4c9c57dbb1d090561b186c1396191a&lt;/sys_scope&gt;&lt;sys_update_name&gt;sn_em_connector_listener_95a386ed2f9002104cc5dc1a2799b6e3&lt;/sys_update_name&gt;&lt;sys_updated_by&gt;admin&lt;/sys_updated_by&gt;&lt;sys_updated_on&gt;2024-02-11 22:46:53&lt;/sys_updated_on&gt;&lt;type&gt;1&lt;/type&gt;&lt;/sn_em_connector_listener&gt;&lt;/record_update&gt;</payload>
+<payload_hash>1764006218</payload_hash>
+<remote_update_set display_value="LogicMonitor Plus Push Connector">ee292f652f9c02104cc5dc1a2799b654</remote_update_set>
+<replace_on_upgrade>false</replace_on_upgrade>
+<sys_created_by>admin</sys_created_by>
+<sys_created_on>2024-02-11 23:32:59</sys_created_on>
+<sys_id>26292f652f9c02104cc5dc1a2799b655</sys_id>
+<sys_mod_count>0</sys_mod_count>
+<sys_recorded_at>18d9a799efc0000001</sys_recorded_at>
+<sys_updated_by>admin</sys_updated_by>
+<sys_updated_on>2024-02-11 23:32:59</sys_updated_on>
+<table/>
+<target_name>LogicMonitor Plus</target_name>
+<type>Push Connectors</type>
+<update_domain>global</update_domain>
+<update_guid>23762fa5999c02104120c37ecc433402</update_guid>
+<update_guid_history>23762fa5999c02104120c37ecc433402:1764006218,e39e5fe51f5c0210fb3241109adece76:1764006218,3f5542ed87900210cf5f8d904e4304f7:-1089606807</update_guid_history>
+<update_set display_value=""/>
+<view/>
+</sys_update_xml>
+</unload>
