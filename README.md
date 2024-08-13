@@ -16,9 +16,10 @@ A better [Push Connector](https://docs.servicenow.com/csh?topicname=configure-li
 
 Create a [Custom HTTP Delivery](https://www.logicmonitor.com/support/alerts/integrations/custom-http-delivery) integration in LogicMonitor with the following required settings.
 * HTTP Method `POST`.
-* URL `https://<TENANT_NAME>.service-now.com/api/sn_em_connector/em/inbound_event?source=lmp`. The additional parameter `event_class` is supported and will map to the `Source instance` event field. For example append `&event_class=sandbox` to identify events from a LogicMonitor sandbox test environment.
+* URL `https://<instancename>.service-now.com/api/sn_em_connector/em/inbound_event?source=lmp`. The additional parameter `event_class` is supported and will map to the `Source instance` event field. For example append `&event_class=sandbox` to identify events from a LogicMonitor sandbox test environment.
 * Username and Password of a ServiceNow user with the `evt_mgmt_integration` role.
 * Alert Data in the following JSON format:
+
 ```json
 {
     "host": "##HOST##",
@@ -45,6 +46,9 @@ Create a [Custom HTTP Delivery](https://www.logicmonitor.com/support/alerts/inte
     "wineventid": "##EVENTCODE##",
     "webcheckurl": "##URL##"
 }
+
 ```
-> [!IMPORTANT]
-> To avoid issues with parsing certain time zones the `GMT (No daylight saving)` zone should be set under [Account Information](https://www.logicmonitor.com/support/settings/account-information/portal-settings) in LogicMonitor. LogicMonitor uses an [abbreviated time zone](https://en.wikipedia.org/wiki/List_of_time_zone_abbreviations) string for the [tokens](https://www.logicmonitor.com/support/logicmodules/about-logicmodules/tokens-available-in-datasource-alert-messages) used in the alert data. Common abbreviated zones such as `BST` and `CST` are not unique and will cause an error in the push connector script.
+> [!NOTE]
+> To avoid issues with parsing certain time zones the `GMT (No daylight saving)` or `UTC` zone should be set under [Account Information](https://www.logicmonitor.com/support/settings/account-information/portal-settings) in LogicMonitor. LogicMonitor uses an [abbreviated time zone](https://en.wikipedia.org/wiki/List_of_time_zone_abbreviations) string for the [tokens](https://www.logicmonitor.com/support/logicmodules/about-logicmodules/tokens-available-in-datasource-alert-messages) used in the alert data. Common abbreviated zones such as `BST` and `CST` are not unique.
+>
+> If the date cannot be parsed from the LogicMonitor event, the time it was received by the Push Connector will be used. A property named `date_parse_error` will be added to the "Additional information" field in the ServiceNow event.
