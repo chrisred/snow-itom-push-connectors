@@ -1,9 +1,9 @@
-<?xml version="1.0" encoding="UTF-8"?><unload unload_date="2024-02-11 23:33:00">
+<?xml version="1.0" encoding="UTF-8"?><unload unload_date="2024-08-13 14:24:14">
 <sys_remote_update_set action="INSERT_OR_UPDATE">
 <application display_value="Event Management Connectors">ac4c9c57dbb1d090561b186c1396191a</application>
 <application_name>Event Management Connectors</application_name>
 <application_scope>sn_em_connector</application_scope>
-<application_version>2.7.0</application_version>
+<application_version>2.10.0</application_version>
 <collisions/>
 <commit_date/>
 <deleted/>
@@ -15,16 +15,16 @@
 <release_date/>
 <remote_base_update_set display_value=""/>
 <remote_parent_id/>
-<remote_sys_id>08166ba12f9c02104cc5dc1a2799b609</remote_sys_id>
+<remote_sys_id>d52f097c83c05610fe68caa6feaad316</remote_sys_id>
 <state>loaded</state>
 <summary/>
 <sys_class_name>sys_remote_update_set</sys_class_name>
 <sys_created_by>admin</sys_created_by>
-<sys_created_on>2024-02-11 23:32:59</sys_created_on>
-<sys_id>ee292f652f9c02104cc5dc1a2799b654</sys_id>
+<sys_created_on>2024-08-13 14:24:13</sys_created_on>
+<sys_id>f11015fc83c05610fe68caa6feaad345</sys_id>
 <sys_mod_count>0</sys_mod_count>
 <sys_updated_by>admin</sys_updated_by>
-<sys_updated_on>2024-02-11 23:32:59</sys_updated_on>
+<sys_updated_on>2024-08-13 14:24:13</sys_updated_on>
 <update_set display_value=""/>
 <update_source display_value=""/>
 <updated/>
@@ -37,7 +37,9 @@
 <name>sn_em_connector_listener_95a386ed2f9002104cc5dc1a2799b6e3</name>
 <payload>&lt;?xml version="1.0" encoding="UTF-8"?&gt;&lt;record_update table="sn_em_connector_listener"&gt;&lt;sn_em_connector_listener action="INSERT_OR_UPDATE"&gt;&lt;active&gt;true&lt;/active&gt;&lt;description&gt;Handles all alert types including Website alerts.&amp;#13;
 &amp;#13;
-To avoid issues with parsing certain time zones the "GMT (No daylight saving)" zone should be set under "Account Information" in LogicMonitor (see script comments).&amp;#13;
+To avoid issues with parsing certain time zones the "GMT (No daylight saving)" or "UTC" zone should be set under "Account Information" in LogicMonitor (see script comments).&amp;#13;
+&amp;#13;
+If the date cannot be parsed from the LogicMonitor event, the time it was received by the Push Connector will be used. "date_parse_error" is added to the "Additional information" field in the event to indicate this has happened.&amp;#13;
 &amp;#13;
 Create a "Custom HTTP Delivery" integration in LogicMonitor and use the JSON payload below:&amp;#13;
 &amp;#13;
@@ -96,6 +98,7 @@ Create a "Custom HTTP Delivery" integration in LogicMonitor and use the JSON pay
         eventRecord.message_key = requestBody.alertid;
         var severity = requestBody.level;
         var alertStatus = requestBody.alertstatus;
+        var additionalInfo = requestBody;
 
         switch (severity)
         {
@@ -114,7 +117,6 @@ Create a "Custom HTTP Delivery" integration in LogicMonitor and use the JSON pay
 
         if (alertStatus == 'clear')
         {
-            eventRecord.resolution_state = 'Closing';
             eventRecord.severity = '0';
         }
         
@@ -163,10 +165,10 @@ Create a "Custom HTTP Delivery" integration in LogicMonitor and use the JSON pay
         }
         else
         {
-            throw new Error('Error parsing event date or duration, this could be due to an abbreviated time zone like BST or an unexpected format.');
+            var glideNowUtc = new GlideDateTime();
+            eventRecord.time_of_event = glideNowUtc;
+            additionalInfo.date_parse_error = true;
         }
-
-        var additionalInfo = requestBody;
 
         // populate additional_info field with request params
         var endpointParamsUtil = new EndpointParamsUtil();
@@ -254,23 +256,23 @@ function parseWebcheckUrl(urlString)
     // return the domain section of the URI
     return (match) ? match[1] : '';
 }
-]]&gt;&lt;/script&gt;&lt;source&gt;lmp&lt;/source&gt;&lt;sys_class_name&gt;sn_em_connector_listener&lt;/sys_class_name&gt;&lt;sys_created_by&gt;admin&lt;/sys_created_by&gt;&lt;sys_created_on&gt;2024-02-11 16:16:59&lt;/sys_created_on&gt;&lt;sys_id&gt;95a386ed2f9002104cc5dc1a2799b6e3&lt;/sys_id&gt;&lt;sys_mod_count&gt;1&lt;/sys_mod_count&gt;&lt;sys_name&gt;LogicMonitor Plus&lt;/sys_name&gt;&lt;sys_package display_value="Event Management Connectors" source="sn_em_connector"&gt;ac4c9c57dbb1d090561b186c1396191a&lt;/sys_package&gt;&lt;sys_policy/&gt;&lt;sys_scope display_value="Event Management Connectors"&gt;ac4c9c57dbb1d090561b186c1396191a&lt;/sys_scope&gt;&lt;sys_update_name&gt;sn_em_connector_listener_95a386ed2f9002104cc5dc1a2799b6e3&lt;/sys_update_name&gt;&lt;sys_updated_by&gt;admin&lt;/sys_updated_by&gt;&lt;sys_updated_on&gt;2024-02-11 22:46:53&lt;/sys_updated_on&gt;&lt;type&gt;1&lt;/type&gt;&lt;/sn_em_connector_listener&gt;&lt;/record_update&gt;</payload>
-<payload_hash>1764006218</payload_hash>
-<remote_update_set display_value="LogicMonitor Plus Push Connector">ee292f652f9c02104cc5dc1a2799b654</remote_update_set>
+]]&gt;&lt;/script&gt;&lt;source&gt;lmp&lt;/source&gt;&lt;sys_class_name&gt;sn_em_connector_listener&lt;/sys_class_name&gt;&lt;sys_created_by&gt;admin&lt;/sys_created_by&gt;&lt;sys_created_on&gt;2024-02-11 16:16:59&lt;/sys_created_on&gt;&lt;sys_id&gt;95a386ed2f9002104cc5dc1a2799b6e3&lt;/sys_id&gt;&lt;sys_mod_count&gt;5&lt;/sys_mod_count&gt;&lt;sys_name&gt;LogicMonitor Plus&lt;/sys_name&gt;&lt;sys_package display_value="Event Management Connectors" source="sn_em_connector"&gt;ac4c9c57dbb1d090561b186c1396191a&lt;/sys_package&gt;&lt;sys_policy/&gt;&lt;sys_scope display_value="Event Management Connectors"&gt;ac4c9c57dbb1d090561b186c1396191a&lt;/sys_scope&gt;&lt;sys_update_name&gt;sn_em_connector_listener_95a386ed2f9002104cc5dc1a2799b6e3&lt;/sys_update_name&gt;&lt;sys_updated_by&gt;admin&lt;/sys_updated_by&gt;&lt;sys_updated_on&gt;2024-08-12 22:55:26&lt;/sys_updated_on&gt;&lt;type&gt;1&lt;/type&gt;&lt;/sn_em_connector_listener&gt;&lt;/record_update&gt;</payload>
+<payload_hash>-1204298622</payload_hash>
+<remote_update_set display_value="LogicMonitor Plus Push Connector">f11015fc83c05610fe68caa6feaad345</remote_update_set>
 <replace_on_upgrade>false</replace_on_upgrade>
 <sys_created_by>admin</sys_created_by>
-<sys_created_on>2024-02-11 23:32:59</sys_created_on>
-<sys_id>26292f652f9c02104cc5dc1a2799b655</sys_id>
+<sys_created_on>2024-08-13 14:24:13</sys_created_on>
+<sys_id>b51015fc83c05610fe68caa6feaad345</sys_id>
 <sys_mod_count>0</sys_mod_count>
-<sys_recorded_at>18d9a799efc0000001</sys_recorded_at>
+<sys_recorded_at>1914c1d8a5b0000001</sys_recorded_at>
 <sys_updated_by>admin</sys_updated_by>
-<sys_updated_on>2024-02-11 23:32:59</sys_updated_on>
+<sys_updated_on>2024-08-13 14:24:13</sys_updated_on>
 <table/>
 <target_name>LogicMonitor Plus</target_name>
 <type>Push Connectors</type>
 <update_domain>global</update_domain>
-<update_guid>23762fa5999c02104120c37ecc433402</update_guid>
-<update_guid_history>23762fa5999c02104120c37ecc433402:1764006218,e39e5fe51f5c0210fb3241109adece76:1764006218,3f5542ed87900210cf5f8d904e4304f7:-1089606807</update_guid_history>
+<update_guid>0a7f81fca7c05610976c023548f68bc0</update_guid>
+<update_guid_history>0a7f81fca7c05610976c023548f68bc0:-1204298622,b48b352c1a84d210fca71dc2f5cb8ebf:-1204298622,8110692c1684d2102badd60e92bb350a:1694246012,3df5c71075049210b27603d2a2cdb0ff:-1613044644,6adc90d04ccc1210ed0a8877f146be70:1694246012,23762fa5999c02104120c37ecc433402:1764006218,e39e5fe51f5c0210fb3241109adece76:1764006218,3f5542ed87900210cf5f8d904e4304f7:-1089606807</update_guid_history>
 <update_set display_value=""/>
 <view/>
 </sys_update_xml>

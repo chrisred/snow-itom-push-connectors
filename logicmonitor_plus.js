@@ -29,6 +29,7 @@
         eventRecord.message_key = requestBody.alertid;
         var severity = requestBody.level;
         var alertStatus = requestBody.alertstatus;
+        var additionalInfo = requestBody;
 
         switch (severity)
         {
@@ -47,7 +48,6 @@
 
         if (alertStatus == 'clear')
         {
-            eventRecord.resolution_state = 'Closing';
             eventRecord.severity = '0';
         }
         
@@ -96,10 +96,11 @@
         }
         else
         {
-            throw new Error('Error parsing event date or duration, this could be due to an abbreviated time zone like BST or an unexpected format.');
+            var glideNowUtc = new GlideDateTime();
+            eventRecord.time_of_event = glideNowUtc;
+            // add a property to additional_info to indicate the event date could not be parsed
+            additionalInfo.date_parse_error = true;
         }
-
-        var additionalInfo = requestBody;
 
         // populate additional_info field with request params
         var endpointParamsUtil = new EndpointParamsUtil();
